@@ -1,0 +1,10 @@
+<%= import_contracts ~w(FungibleToken DevryCoin) %>
+
+pub fun main(): UFix64 {
+  let account = getAccount(<%= @address %>)
+
+  let vaultRef = account.getCapability(DevryCoin.BalancePublicPath)!.borrow<&DevryCoin.Vault{FungibleToken.Balance}>()
+    ?? panic("Could not borrow Balance reference to the Vault")
+
+  return vaultRef.balance
+}

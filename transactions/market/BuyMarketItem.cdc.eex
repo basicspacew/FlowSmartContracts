@@ -1,0 +1,34 @@
+<%= import_contracts ~w(FungibleToken NonFungibleToken DevryCoin BSListings BSMarket) %>
+
+transaction(saleNFTID: UInt64, marketCollectionAddress: Address) {
+  let paymentVault: @FungibleToken.Vault
+  let bsListingsCollection: &BSListings.Collection{NonFungibleToken.Receiver}
+  let marketCollection: &BSMarket.Collection{BSMarket.CollectionPublic}
+
+  prepare(signer: AuthAccount) {
+    self.marketCollection = getAccount(marketCollectionAddress)
+      .getCapability<&BSMarket.Collection{BSMarket.CollectionPublic}>(BSMarket.CollectionPublicPath)!
+      .borrow()
+      ?? panic("Could not borrow market collection from market address")
+
+    let saleItem = self.marketCollection.borrowSaleItem(saleNFTID: saleNFTID)
+          ?? panic("No item with that ID")
+    let price = saleItem.salePrice
+
+    let mainDevryCoinVault = signer.borrow<&DevryCoin.Vault>(from: DevryCoin.VaultStoragePath)
+      ?? panic("Cannot borrow DevryCoin vault from acct storage")
+    self.paymentVault <- mainDevryCoinVault.withdraw(amount: price)
+
+    self.bsListingsCollection = signer.borrow<&BSListings.Collection{NonFungibleToken.Receiver}>(
+      from: BSListings.CollectionStoragePath
+    ) ?? panic("Cannot borrow BSListings collection receiver from acct")
+  }
+
+  execute {
+    self.marketCollection.purchase(
+      saleNFTID: saleNFTID,
+      buyerCollection: self.bsListingsCollection,
+      buyerPayment: <- self.paymentVault
+    )
+  }
+}

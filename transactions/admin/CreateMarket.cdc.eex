@@ -1,0 +1,21 @@
+<%= import_contracts ~w(BSMarket) %>
+
+// This transaction configures an account to hold SaleOffer items.
+
+transaction {
+  prepare(signer: AuthAccount) {
+
+    // if the account doesn't already have a collection
+    if signer.borrow<&BSMarket.Collection>(from: BSMarket.CollectionStoragePath) == nil {
+
+      // create a new empty collection
+      let collection <- BSMarket.createEmptyCollection() as! @BSMarket.Collection
+      
+      // save it to the account
+      signer.save(<-collection, to: BSMarket.CollectionStoragePath)
+
+      // create a public capability for the collection
+      signer.link<&BSMarket.Collection{BSMarket.CollectionPublic}>(BSMarket.CollectionPublicPath, target: BSMarket.CollectionStoragePath)
+    }
+  }
+}

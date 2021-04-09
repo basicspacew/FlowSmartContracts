@@ -1,0 +1,13 @@
+<%= import_contracts ~w(BSMarket) %>
+
+// This script returns an array of all the NFT IDs for sale 
+// in an account's SaleOffer collection.
+
+pub fun main(): [UInt64] {
+  let marketCollectionRef = getAccount(<%= @address %>)
+    .getCapability<&BSMarket.Collection{BSMarket.CollectionPublic}>(BSMarket.CollectionPublicPath)
+    .borrow()
+      ?? panic("Could not borrow market collection from market address")
+  
+  return marketCollectionRef.getSaleOfferIDs()
+}

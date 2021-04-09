@@ -1,0 +1,10 @@
+<%= import_contracts ~w(NonFungibleToken BSListings) %>
+
+pub fun main(): [UInt64] {
+  let account = getAccount(<%= @address %>)
+
+  let collectionRef = account.getCapability(BSListings.CollectionPublicPath)!.borrow<&{NonFungibleToken.CollectionPublic}>()
+    ?? panic("Could not borrow capability from public collection")
+    
+  return collectionRef.getIDs()
+}

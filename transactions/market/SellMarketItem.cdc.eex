@@ -1,0 +1,36 @@
+<%= import_contracts ~w(FungibleToken NonFungibleToken DevryCoin BSListings BSMarket) %>
+
+transaction(nftId: UInt64, price: UFix64) {
+  let devryCoinVault: Capability<&DevryCoin.Vault{FungibleToken.Receiver}>
+  let bsListingsCollection: Capability<&BSListings.Collection{NonFungibleToken.Provider, BSListings.BSListingsCollectionPublic}>
+  let marketCollection: &BSMarket.Collection
+
+  prepare(signer: AuthAccount) {
+    // we need a provider capability, but one is not provided by default so we create one.
+    let BSListingsCollectionProviderPrivatePath = /private/bsListingsCollectionProvider
+
+    self.devryCoinVault = signer.getCapability<&DevryCoin.Vault{FungibleToken.Receiver}>(DevryCoin.ReceiverPublicPath)!
+    assert(self.devryCoinVault.borrow() != nil, message: "Missing or mis-typed DevryCoin receiver")
+
+    if !signer.getCapability<&BSListings.Collection{NonFungibleToken.Provider, BSListings.BSListingsCollectionPublic}>(BSListingsCollectionProviderPrivatePath)!.check() {
+      signer.link<&BSListings.Collection{NonFungibleToken.Provider, BSListings.BSListingsCollectionPublic}>(BSListingsCollectionProviderPrivatePath, target: BSListings.CollectionStoragePath)
+    }
+
+    self.bsListingsCollection = signer.getCapability<&BSListings.Collection{NonFungibleToken.Provider, BSListings.BSListingsCollectionPublic}>(BSListingsCollectionProviderPrivatePath)!
+    assert(self.bsListingsCollection.borrow() != nil, message: "Missing or mis-typed BSListingsCollection provider")
+
+    self.marketCollection = signer.borrow<&BSMarket.Collection>(from: BSMarket.CollectionStoragePath)
+      ?? panic("Missing or mis-typed BSMarket Collection")
+  }
+
+  execute {
+    let offer <- BSMarket.createSaleOffer(
+      sellerItemProvider: self.bsListingsCollection,
+      saleNFTID: self.bsListingsCollection.borrow()!.borrowBSListing(id: nftId)!.id,
+      sellerPaymentReceiver: self.devryCoinVault,
+      salePrice: price
+    )
+    self.marketCollection.insert(offer: <-offer)
+  }
+}
+

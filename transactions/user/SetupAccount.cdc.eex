@@ -1,0 +1,53 @@
+<%= import_contracts ~w(FungibleToken DevryCoin NonFungibleToken BSListings BSMarket) %>
+
+// This transaction configures an account to hold listings.
+
+transaction {
+  prepare(signer: AuthAccount) {
+    // BSListing NFTs
+    if signer.borrow<&BSListings.Collection>(from: BSListings.CollectionStoragePath) == nil {
+
+      // create a new empty collection
+      let collection <- BSListings.createEmptyCollection()
+
+      // save it to the account
+      signer.save(<-collection, to: BSListings.CollectionStoragePath)
+
+      // create a public capability for the collection
+      signer.link<&BSListings.Collection{NonFungibleToken.CollectionPublic, BSListings.BSListingsCollectionPublic}>(BSListings.CollectionPublicPath, target: BSListings.CollectionStoragePath)
+    }
+
+    // DevryCoin setup
+    if signer.borrow<&DevryCoin.Vault>(from: DevryCoin.VaultStoragePath) == nil {
+      // Create a new DevryCoin Vault and put it in storage
+      signer.save(<-DevryCoin.createEmptyVault(), to: DevryCoin.VaultStoragePath)
+
+      // Create a public capability to the Vault that only exposes
+      // the deposit function through the Receiver interface
+      signer.link<&DevryCoin.Vault{FungibleToken.Receiver}>(
+        DevryCoin.ReceiverPublicPath,
+        target: DevryCoin.VaultStoragePath
+      )
+
+      // Create a public capability to the Vault that only exposes
+      // the balance field through the Balance interface
+      signer.link<&DevryCoin.Vault{FungibleToken.Balance}>(
+        DevryCoin.BalancePublicPath,
+        target: DevryCoin.VaultStoragePath
+      )
+    }
+
+    // BSMarket setup
+    if signer.borrow<&BSMarket.Collection>(from: BSMarket.CollectionStoragePath) == nil {
+
+      // create a new empty collection
+      let collection <- BSMarket.createEmptyCollection() as! @BSMarket.Collection
+      
+      // save it to the account
+      signer.save(<-collection, to: BSMarket.CollectionStoragePath)
+
+      // create a public capability for the collection
+      signer.link<&BSMarket.Collection{BSMarket.CollectionPublic}>(BSMarket.CollectionPublicPath, target: BSMarket.CollectionStoragePath)
+    }
+  }
+}
