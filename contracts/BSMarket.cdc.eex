@@ -63,16 +63,20 @@ pub contract BSMarket {
 
       self.saleCompleted = true
 
-      // Deposit into the beneficiary's account
+      // Deposit into the beneficiaries' accounts
       let bsListing = self.sellerItemProvider.borrow()!.borrowBSListing(id: self.saleNFTID)!
-      let beneficiaryRef = getAccount(bsListing.beneficiary)
-            .getCapability(DevryCoin.ReceiverPublicPath)
-            .borrow<&{FungibleToken.Receiver}>()
 
-      let beneficiaryCut <- buyerPayment.withdraw(amount: self.salePrice * 0.1)
-      beneficiaryRef!.deposit(from: <-beneficiaryCut)
+      for beneficiary in bsListing.beneficiaries.keys {
+        let percentage = bsListing.beneficiaries[beneficiary]!
+        let beneficiaryRef = getAccount(beneficiary)
+              .getCapability(DevryCoin.ReceiverPublicPath)
+              .borrow<&{FungibleToken.Receiver}>()
 
-      // Deposit into the seller's account
+        let beneficiaryCut <- buyerPayment.withdraw(amount: self.salePrice * percentage)
+        beneficiaryRef!.deposit(from: <-beneficiaryCut)
+      }
+
+      // Deposit the remainder into the seller's account
       self.sellerPaymentReceiver.borrow()!.deposit(from: <-buyerPayment)
 
       let nft <- self.sellerItemProvider.borrow()!.withdraw(withdrawID: self.saleNFTID)
