@@ -4,7 +4,7 @@ pub contract BSMarket {
   // SaleOffer events.
   //
   // A sale offer has been created.
-  pub event SaleOfferCreated(nftID: UInt64, price: UFix64)
+  pub event SaleOfferCreated(nftID: UInt64, price: UFix64, beneficiaries: {Address: UFix64})
   // Someone has purchased an item that was offered for sale.
   pub event SaleOfferAccepted(nftID: UInt64)
   // A sale offer has been destroyed, with or without being accepted.
@@ -45,8 +45,11 @@ pub contract BSMarket {
 
     // The sale payment price.
     pub let salePrice: UFix64
+
     // The DevryCoin vault that will receive that payment if the sale completes successfully.
     access(self) let sellerPaymentReceiver: Capability<&DevryCoin.Vault{FungibleToken.Receiver}>
+
+    access(self) let beneficiaries: {Address: UFix64}
 
     // Called by a purchaser to accept the sale offer.
     // If they send the correct payment in DevryCoin, and if the item is still available,
@@ -64,10 +67,8 @@ pub contract BSMarket {
       self.saleCompleted = true
 
       // Deposit into the beneficiaries' accounts
-      let bsListing = self.sellerItemProvider.borrow()!.borrowBSListing(id: self.saleNFTID)!
-
-      for beneficiary in bsListing.beneficiaries.keys {
-        let percentage = bsListing.beneficiaries[beneficiary]!
+      for beneficiary in self.beneficiaries.keys {
+        let percentage = self.beneficiaries[beneficiary]!
         let beneficiaryRef = getAccount(beneficiary)
               .getCapability(DevryCoin.ReceiverPublicPath)
               .borrow<&{FungibleToken.Receiver}>()
@@ -100,7 +101,8 @@ pub contract BSMarket {
       sellerItemProvider: Capability<&BSListings.Collection{BSListings.BSListingsCollectionPublic, NonFungibleToken.Provider}>,
       saleNFTID: UInt64,
       sellerPaymentReceiver: Capability<&DevryCoin.Vault{FungibleToken.Receiver}>,
-      salePrice: UFix64
+      salePrice: UFix64,
+      beneficiaries: {Address: UFix64}
     ) {
       pre {
         sellerItemProvider.borrow() != nil: "Cannot borrow seller"
@@ -114,8 +116,19 @@ pub contract BSMarket {
 
       self.sellerPaymentReceiver = sellerPaymentReceiver
       self.salePrice = salePrice
+      self.beneficiaries = beneficiaries
 
-      emit SaleOfferCreated(nftID: self.saleNFTID, price: self.salePrice)
+      // Check beneficiary percentages
+      var total: UFix64 = 0.0
+      for percentage in beneficiaries.values {
+        total = total + percentage
+      }
+
+      if (total > 1.0) {
+        panic("Beneficiary total cannot exceed 100% of future sales")
+      }
+
+      emit SaleOfferCreated(nftID: self.saleNFTID, price: self.salePrice, beneficiaries: self.beneficiaries)
     }
   }
 
@@ -126,13 +139,15 @@ pub contract BSMarket {
     sellerItemProvider: Capability<&BSListings.Collection{BSListings.BSListingsCollectionPublic, NonFungibleToken.Provider}>,
     saleNFTID: UInt64,
     sellerPaymentReceiver: Capability<&DevryCoin.Vault{FungibleToken.Receiver}>,
-    salePrice: UFix64
+    salePrice: UFix64,
+    beneficiaries: {Address: UFix64}
   ): @SaleOffer {
     return <-create SaleOffer(
       sellerItemProvider: sellerItemProvider,
       saleNFTID: saleNFTID,
       sellerPaymentReceiver: sellerPaymentReceiver,
-      salePrice: salePrice
+      salePrice: salePrice,
+      beneficiaries: beneficiaries
     )
   }
 
@@ -263,8 +278,7 @@ pub contract BSMarket {
   }
 
   init () {
-    //FIXME: REMOVE SUFFIX BEFORE RELEASE
-    self.CollectionStoragePath = /storage/bsMarketCollection001
-    self.CollectionPublicPath = /public/bsMarketCollection001
+    self.CollectionStoragePath = /storage/bsMarketCollection
+    self.CollectionPublicPath = /public/bsMarketCollection
   }
 }

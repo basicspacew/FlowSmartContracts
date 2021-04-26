@@ -28,16 +28,12 @@ pub contract BSListings: NonFungibleToken {
     pub let id: UInt64
     // The token's listing ID on Basic Space
     pub let listingID: String
-    // The token's beneficiaries will receive a portion of each future sale.
-    // This maps the address along with their portion of the sale.
-    pub let beneficiaries: {Address: UFix64}
 
     // initializer
     //
-    init(initID: UInt64, initListingID: String, initBeneficiaries: {Address: UFix64}) {
+    init(initID: UInt64, initListingID: String) {
       self.id = initID
       self.listingID = initListingID
-      self.beneficiaries = initBeneficiaries
     }
   }
 
@@ -153,23 +149,13 @@ pub contract BSListings: NonFungibleToken {
     // Mints a new NFT with a new ID
     // and deposit it in the recipients collection using their collection reference
     //
-    pub fun mintNFT(recipient: &{NonFungibleToken.CollectionPublic}, listingID: String, beneficiaries: {Address: UFix64}) {
-
-      var total: UFix64 = 0.0
-      for percentage in beneficiaries.values {
-        total = total + percentage
-      }
-
-      if (total > 1.0) {
-        panic("Beneficiary total cannot exceed 100% of future sales")
-      }
+    pub fun mintNFT(recipient: &{NonFungibleToken.CollectionPublic}, listingID: String) {
 
       emit Minted(id: BSListings.totalSupply, listingID: listingID)
 
       // deposit it in the recipient's account using their reference
       recipient.deposit(token: <-create BSListings.NFT(initID: BSListings.totalSupply,
-                                                       initListingID: listingID,
-                                                       initBeneficiaries: beneficiaries))
+                                                       initListingID: listingID))
 
       BSListings.totalSupply = BSListings.totalSupply + (1 as UInt64)
     }

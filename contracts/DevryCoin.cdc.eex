@@ -159,11 +159,10 @@ pub contract DevryCoin: FungibleToken {
 
   init() {
     // Set our named paths.
-    //FIXME: REMOVE SUFFIX BEFORE RELEASE
-    self.VaultStoragePath = /storage/devryCoinVault002
-    self.ReceiverPublicPath = /public/devryCoinReceiver002
-    self.BalancePublicPath = /public/devryCoinBalance002
-    self.AdminStoragePath = /storage/devryCoinAdmin002
+    self.VaultStoragePath = /storage/devryCoinVault
+    self.ReceiverPublicPath = /public/devryCoinReceiver
+    self.BalancePublicPath = /public/devryCoinBalance
+    self.AdminStoragePath = /storage/devryCoinAdmin
 
     // Initialize contract state.
     self.totalSupply = 0.0

@@ -1,6 +1,6 @@
 <%= import_contracts ~w(FungibleToken NonFungibleToken DevryCoin BSListings BSMarket) %>
 
-transaction(nftId: UInt64, price: UFix64) {
+transaction(nftId: UInt64, price: UFix64, beneficiaries: {Address: UFix64}) {
   let devryCoinVault: Capability<&DevryCoin.Vault{FungibleToken.Receiver}>
   let bsListingsCollection: Capability<&BSListings.Collection{NonFungibleToken.Provider, BSListings.BSListingsCollectionPublic}>
   let marketCollection: &BSMarket.Collection
@@ -28,7 +28,8 @@ transaction(nftId: UInt64, price: UFix64) {
       sellerItemProvider: self.bsListingsCollection,
       saleNFTID: self.bsListingsCollection.borrow()!.borrowBSListing(id: nftId)!.id,
       sellerPaymentReceiver: self.devryCoinVault,
-      salePrice: price
+      salePrice: price,
+      beneficiaries: beneficiaries
     )
     self.marketCollection.insert(offer: <-offer)
   }
