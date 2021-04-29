@@ -234,7 +234,6 @@ pub contract BSMarket {
       }
       let offer <- self.remove(saleNFTID: saleNFTID)
       offer.accept(buyerCollection: buyerCollection, buyerPayment: <-buyerPayment)
-      //FIXME: Is this correct? Or should we return it to the caller to dispose of?
       destroy offer
     }
 
