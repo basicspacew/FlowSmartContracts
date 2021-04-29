@@ -109,6 +109,12 @@ pub contract BSMarket {
         sellerPaymentReceiver.borrow() != nil: "Cannot borrow sellerPaymentReceiver"
       }
 
+      let borrowedItemProvider = sellerItemProvider.borrow()!
+
+      if (!borrowedItemProvider.getIDs().contains(saleNFTID)) {
+        panic("NFT not found in the seller collection")
+      }
+
       self.saleCompleted = false
 
       self.sellerItemProvider = sellerItemProvider
